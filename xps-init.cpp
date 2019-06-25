@@ -32,11 +32,11 @@ int main(int argc, char const *argv[]){
 				system("displayswitch.exe /extend");
 			}
 		}
-		system("w32tm /resync /nowait");
+	
 		timeInt++;
 
 		if(timeInt >= 30){	//90sec refresh interval
-			system("w32tm /resync /nowait");
+			ReSyncTime();
 		}
 	}
 	return 0;	
