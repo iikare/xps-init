@@ -44,7 +44,7 @@ void ReSyncTime(){
 		cout << "Failed to set registry value.\n";
 	}
 
-	system("w32tm /resync");
+	system("w32tm /resync /nowait");
 
 	RegCloseKey(AccessKey);
 }
