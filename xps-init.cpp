@@ -53,7 +53,7 @@ void DeInit(){
 		if(RegCloseKey(AccessKey) == ERROR_SUCCESS){
 			break;
 		}
-		if(tryCount ==2){
+		if(tryCount == 2){
 			break;
 			cout << "Failed to deinitialize registry key.\n";
 		}
@@ -67,18 +67,37 @@ void StartTB(){
 }
 
 static long WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
-    if(message == WM_POWERBROADCAST){
-   		wndMsg = FALSE;
-		DeInit();
-        return TRUE;
-    }
-    else{
-        return DefWindowProc(hWnd, message, wParam, lParam);
+    switch(message){
+    	case WM_POWERBROADCAST:
+    		switch(wParam){
+    			case PBT_APMRESUMEAUTOMATIC:
+    				StartTB();
+    				break;
+    			case PBT_APMRESUMESUSPEND:
+    				StartTB();
+    				break;
+    		}
+			break;
+		case WM_DESTROY:
+			wndMsg = FALSE;
+			DeInit();
+
+			if (!FreeConsole()) {
+				cout << "Error: Could not free console.\n";
+			}
+
+			DestroyWindow(shadow);
+
+			PostQuitMessage(0);
+			break;
+		default:
+        	return DefWindowProc(hWnd, message, wParam, lParam);
+        	break;
     }
 }
 
 void MessageHandler(){
-		while(msgStatus != 0){
+	while(msgStatus != 0){
 		if(msgStatus == -1){
 			wndMsg = FALSE;
 			cout << "Failed to initialize application.\n";
@@ -93,7 +112,7 @@ void MessageHandler(){
 
 void LogicHandler(){
 	while(wndMsg){
-			cout<<"test";
+			cout<<"test\n";
 
 			QueryMonitor();
 			timer.initCount = monIndex.monNum.size();
@@ -126,11 +145,9 @@ void LogicHandler(){
 				ReSyncTime();
 			}
 
-			if(timeInt % 15){
+			if(timeInt % 15 == 0){
 				StartTB();
 			}
-
-			StartTB(); //DEBUG
 
 			timeInt++;
 		}
