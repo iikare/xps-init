@@ -1,43 +1,138 @@
 #include "xps-init.h"
 
 QueryMonitor monIndex;
-monTimer timer = {0, 0, 3000};
+monTimer timer = {0, 0, REFRESH_INTERVAL};
 BOOL setFlag = FALSE;
+BOOL wndMsg = TRUE;
+BOOL msgStatus;
 long timeInt = 0;
+HKEY AccessKey;
+HWND shadow;
+MSG msg;
 
 int main(int argc, char const *argv[]){						//TODO: implement restarting of TTB after system sleep/set interval
-	while(true /*add shutdown flag*/){
-		QueryMonitor();
-		timer.initCount = monIndex.monNum.size();
-		Sleep(timer.monInterval);
-		
-		QueryMonitor();
-		timer.finCount = monIndex.monNum.size();
+	WNDCLASS wc = {0};
 
-		cout << monIndex.monNum.size() << "\n";
+	wc.lpfnWndProc = (WNDPROC)WindowProc;
+	wc.lpszClassName = TEXT("xps-init");
+	RegisterClass(&wc);
+	HWND shadow = CreateWindow(TEXT("xps-init"), TEXT(""), 0, 0, 0, 0, 0, NULL, NULL, NULL, 0);
+	BOOL msgStatus = GetMessage(&msg, shadow, 0, 0);
 
-		if(timer.initCount < timer.finCount && monIndex.monNum.size() >= 2){
-			if(setFlag == FALSE){
-				system("displayswitch.exe /extend");
-				cout << "Display Extended\n";
-				setFlag = TRUE;
-			}
+	thread THREAD_MessageHandler(MessageHandler);
+	thread THREAD_LogicHandler(LogicHandler);
+
+	THREAD_LogicHandler.join();
+	THREAD_MessageHandler.join();
+
+	return 0;	
+}
+
+void ReSyncTime(){
+
+	if(RegOpenKey(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters"), &AccessKey) != ERROR_SUCCESS){
+		cout << "Failed to open registry key.\n";
+	}
+
+	//NTP = on, NoSync = off
+	if (RegSetValueEx(AccessKey, TEXT("Type"), 0, REG_SZ, (LPBYTE)"NoSync", strlen("NoSync")*sizeof(char)) != ERROR_SUCCESS){
+		cout << "Failed to clear registry value.\n";
+	}
+
+	if (RegSetValueEx(AccessKey, TEXT("Type"), 0, REG_SZ, (LPBYTE)"NTP", strlen("NTP")*sizeof(char)) != ERROR_SUCCESS){
+		cout << "Failed to set registry value.\n";
+	}
+
+	system("w32tm /resync /nowait");
+
+	RegCloseKey(AccessKey);
+}
+
+void DeInit(){
+	for(int tryCount = 0; tryCount < MAX_SHUTDOWN_ATTEMPT; tryCount++){
+		if(RegCloseKey(AccessKey) == ERROR_SUCCESS){
+			break;
 		}
-
-		if(timer.initCount > timer.finCount){
-			if(monIndex.monNum.size() == 1){
-				setFlag = FALSE;
-			}
-			else{
-				system("displayswitch.exe /extend");
-			}
-		}
-	
-		timeInt++;
-
-		if(timeInt >= 30){	//90sec refresh interval
-			ReSyncTime();
+		if(tryCount ==2){
+			break;
+			cout << "Failed to deinitialize registry key.\n";
 		}
 	}
-	return 0;	
+}
+
+void StartTB(){
+	if(!ShellExecuteA(NULL, "open", PATH_01, NULL, NULL, SW_HIDE)){
+		cout << "Error: Could not open TTB.\n";
+	}
+}
+
+static long WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam){
+    if(message == WM_POWERBROADCAST){
+   		wndMsg = FALSE;
+		DeInit();
+        return TRUE;
+    }
+    else{
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+}
+
+void MessageHandler(){
+		while(msgStatus != 0){
+		if(msgStatus == -1){
+			wndMsg = FALSE;
+			cout << "Failed to initialize application.\n";
+		}
+		else{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		GetMessage(&msg, shadow, 0, 0);
+	}
+}
+
+void LogicHandler(){
+	while(wndMsg){
+			cout<<"test";
+
+			QueryMonitor();
+			timer.initCount = monIndex.monNum.size();
+			
+			Sleep(timer.monInterval);
+			
+			QueryMonitor();
+			timer.finCount = monIndex.monNum.size();
+
+			cout << monIndex.monNum.size() << "\n";
+
+			if(timer.initCount < timer.finCount && monIndex.monNum.size() >= 2){
+				if(setFlag == FALSE){
+					system("displayswitch.exe /extend");
+					cout << "Display Extended.\n";
+					setFlag = TRUE;
+				}
+			}
+
+			if(timer.initCount > timer.finCount){
+				if(monIndex.monNum.size() == 1){
+					setFlag = FALSE;
+				}
+				else{
+					system("displayswitch.exe /extend");
+				}
+			}
+
+			if(timeInt % 30 == 0){	//90sec refresh interval
+				ReSyncTime();
+			}
+
+			if(timeInt % 15){
+				StartTB();
+			}
+
+			StartTB(); //DEBUG
+
+			timeInt++;
+		}
+
 }
