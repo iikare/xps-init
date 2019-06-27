@@ -2,12 +2,17 @@
 
 QueryMonitor monIndex;
 monTimer timer = {0, 0, REFRESH_INTERVAL};
+
 BOOL setFlag = FALSE;
 BOOL wndMsg = TRUE;
 BOOL msgStatus;
 long timeInt = 0;
+int ColorIndex[2];
+
 HKEY AccessKey;
 HWND shadow;
+HDC dc = GetDC(0);
+COLORREF TBB_Pixel;
 MSG msg;
 
 int main(int argc, char const *argv[]){						//TODO: implement restarting of TTB after system sleep/set interval
@@ -18,6 +23,8 @@ int main(int argc, char const *argv[]){						//TODO: implement restarting of TTB
 	RegisterClass(&wc);
 	HWND shadow = CreateWindow(TEXT("xps-init"), TEXT(""), 0, 0, 0, 0, 0, NULL, NULL, NULL, 0);
 	BOOL msgStatus = GetMessage(&msg, shadow, 0, 0);
+
+	LoadLibrary(TEXT("gdi32.dll"));
 
 	thread THREAD_MessageHandler(MessageHandler);
 	thread THREAD_LogicHandler(LogicHandler);
@@ -148,6 +155,14 @@ void LogicHandler(){
 			if(timeInt % 15 == 0){
 				StartTB();
 			}
+
+			TBB_Pixel = GetPixel(dc, 10, 10);
+			
+			ColorIndex[0] = GetRValue(TBB_Pixel);
+			ColorIndex[1] = GetGValue(TBB_Pixel);
+			ColorIndex[2] = GetBValue(TBB_Pixel);
+			
+			cout << ColorIndex[0];
 
 			timeInt++;
 		}
