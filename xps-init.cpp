@@ -5,7 +5,7 @@ monTimer timer = {0, 0, 3000};
 BOOL setFlag = FALSE;
 long timeInt = 0;
 
-int main(int argc, char const *argv[]){
+int main(int argc, char const *argv[]){						//TODO: implement restarting of TTB after system sleep/set interval
 	while(true /*add shutdown flag*/){
 		QueryMonitor();
 		timer.initCount = monIndex.monNum.size();
