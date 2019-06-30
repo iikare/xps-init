@@ -16,6 +16,7 @@ struct monTimer;
 void ReSyncTime();
 void DeInit();
 void StartTB();
+void ConfigureStartup();
 void MessageHandler();
 void LogicHandler();
 static long WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);

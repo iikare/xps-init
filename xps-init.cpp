@@ -7,15 +7,13 @@ BOOL setFlag = FALSE;
 BOOL wndMsg = TRUE;
 BOOL msgStatus;
 long timeInt = 0;
-int ColorIndex[2];
 
-HKEY AccessKey;
+HKEY AccessKeyTime;
+HKEY AccessKeyStart;
 HWND shadow;
-HDC dc = GetDC(0);
-COLORREF TBB_Pixel;
 MSG msg;
 
-int main(int argc, char const *argv[]){						//TODO: implement restarting of TTB after system sleep/set interval
+int main(int argc, char const *argv[]){		//TODO: add .ini file
 	WNDCLASS wc = {0};
 
 	wc.lpfnWndProc = (WNDPROC)WindowProc;
@@ -24,7 +22,7 @@ int main(int argc, char const *argv[]){						//TODO: implement restarting of TTB
 	HWND shadow = CreateWindow(TEXT("xps-init"), TEXT(""), 0, 0, 0, 0, 0, NULL, NULL, NULL, 0);
 	BOOL msgStatus = GetMessage(&msg, shadow, 0, 0);
 
-	LoadLibrary(TEXT("gdi32.dll"));
+	ConfigureStartup();
 
 	thread THREAD_MessageHandler(MessageHandler);
 	thread THREAD_LogicHandler(LogicHandler);
@@ -37,27 +35,27 @@ int main(int argc, char const *argv[]){						//TODO: implement restarting of TTB
 
 void ReSyncTime(){
 
-	if(RegOpenKey(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters"), &AccessKey) != ERROR_SUCCESS){
+	if(RegOpenKey(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Services\\W32Time\\Parameters"), &AccessKeyTime) != ERROR_SUCCESS){
 		cout << "Failed to open registry key.\n";
 	}
 
 	//NTP = on, NoSync = off
-	if (RegSetValueEx(AccessKey, TEXT("Type"), 0, REG_SZ, (LPBYTE)"NoSync", strlen("NoSync")*sizeof(char)) != ERROR_SUCCESS){
+	if (RegSetValueEx(AccessKeyTime, TEXT("Type"), 0, REG_SZ, (LPBYTE)"NoSync", strlen("NoSync")*sizeof(char)) != ERROR_SUCCESS){
 		cout << "Failed to clear registry value.\n";
 	}
 
-	if (RegSetValueEx(AccessKey, TEXT("Type"), 0, REG_SZ, (LPBYTE)"NTP", strlen("NTP")*sizeof(char)) != ERROR_SUCCESS){
+	if (RegSetValueEx(AccessKeyTime, TEXT("Type"), 0, REG_SZ, (LPBYTE)"NTP", strlen("NTP")*sizeof(char)) != ERROR_SUCCESS){
 		cout << "Failed to set registry value.\n";
 	}
 
 	system("w32tm /resync /nowait");
 
-	RegCloseKey(AccessKey);
+	RegCloseKey(AccessKeyTime);
 }
 
 void DeInit(){
 	for(int tryCount = 0; tryCount < MAX_SHUTDOWN_ATTEMPT; tryCount++){
-		if(RegCloseKey(AccessKey) == ERROR_SUCCESS){
+		if(RegCloseKey(AccessKeyTime) == ERROR_SUCCESS){
 			break;
 		}
 		if(tryCount == 2){
@@ -65,6 +63,17 @@ void DeInit(){
 			cout << "Failed to deinitialize registry key.\n";
 		}
 	}
+}
+
+void ConfigureStartup(){	//TODO: Add .ini based options
+
+	RegCreateKey(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", &AccessKeyStart);
+	
+	if (RegSetValueEx(AccessKeyStart, TEXT("xps-init"), 0, REG_SZ, (LPBYTE)"C:\\files\\projects\\xps-init\\xpsinit.exe", strlen("C:\\files\\projects\\xps-init\\xpsinit.exe")*sizeof(char)) != ERROR_SUCCESS){
+		cout << "Failed to set program to run at startup.\n";
+	}
+
+	RegCloseKey(AccessKeyStart);
 }
 
 void StartTB(){
@@ -155,14 +164,6 @@ void LogicHandler(){
 			if(timeInt % 15 == 0){
 				StartTB();
 			}
-
-			TBB_Pixel = GetPixel(dc, 10, 10);
-			
-			ColorIndex[0] = GetRValue(TBB_Pixel);
-			ColorIndex[1] = GetGValue(TBB_Pixel);
-			ColorIndex[2] = GetBValue(TBB_Pixel);
-			
-			cout << ColorIndex[0];
 
 			timeInt++;
 		}
