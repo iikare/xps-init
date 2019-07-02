@@ -128,44 +128,44 @@ void MessageHandler(){
 
 void LogicHandler(){
 	while(wndMsg){
-			cout<<"test\n";
+		cout<<"test\n";
 
-			QueryMonitor();
-			timer.initCount = monIndex.monNum.size();
-			
-			Sleep(timer.monInterval);
-			
-			QueryMonitor();
-			timer.finCount = monIndex.monNum.size();
+		QueryMonitor();
+		timer.initCount = monIndex.monNum.size();
 
-			cout << monIndex.monNum.size() << "\n";
+		Sleep(timer.monInterval);
 
-			if(timer.initCount < timer.finCount && monIndex.monNum.size() >= 2){
-				if(setFlag == FALSE){
-					system("displayswitch.exe /extend");
-					cout << "Display Extended.\n";
-					setFlag = TRUE;
-				}
+		QueryMonitor();
+		timer.finCount = monIndex.monNum.size();
+
+		cout << monIndex.monNum.size() << "\n";
+
+		if(timer.initCount < timer.finCount && monIndex.monNum.size() >= 2){
+			if(setFlag == FALSE){
+				system("displayswitch.exe /extend");
+				cout << "Display Extended.\n";
+				setFlag = TRUE;
 			}
-
-			if(timer.initCount > timer.finCount){
-				if(monIndex.monNum.size() == 1){
-					setFlag = FALSE;
-				}
-				else{
-					system("displayswitch.exe /extend");
-				}
-			}
-
-			if(timeInt % 30 == 0){	//90sec refresh interval
-				ReSyncTime();
-			}
-
-			if(timeInt % 15 == 0){
-				StartTB();
-			}
-
-			timeInt++;
 		}
+
+		if(timer.initCount > timer.finCount){
+			if(monIndex.monNum.size() == 1){
+				setFlag = FALSE;
+			}
+			else{
+				system("displayswitch.exe /extend");
+			}
+		}
+
+		if(timeInt % 30 == 0){	//90sec refresh interval
+			ReSyncTime();
+		}
+
+		if(timeInt % 15 == 0){
+			StartTB();
+		}
+
+		timeInt++;
+	}
 
 }
